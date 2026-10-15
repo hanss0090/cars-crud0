@@ -22,8 +22,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m playwright install --with-deps chromium
           python -m pip install -r requirements-dev.txt
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
 
       - name: Run unit tests
         run: python -m pytest tests/unit -q
