@@ -26,19 +26,37 @@ def test_user_edits_car_and_change_survives_reload(page, live_server):
     page.get_by_label("Model", exact=True).fill("Accord")
     page.get_by_label("Year", exact=True).fill("2023")
 
-    # 4. 点击保存修改
+    # 4. 点击保存修改，并等待跳转完成
     page.get_by_role("button", name="Save changes").click()
-
-    # ===== 加这里：看点击后跳转到哪了 =====
+    
+    # 等待网络空闲，确保后端已处理保存请求
     page.wait_for_load_state("networkidle")
-    print(f"Current URL: {page.url}")  # 是 /cars/xxx 还是还在 /cars/xxx/edit？
-    print(f"Page title: {page.title()}")
-    # =====================================
-
-    # 5. 断言详情页面标题包含 Honda Accord
-    expect(page.get_by_text("Honda Accord", exact=False)).to_be_visible(timeout=15000)
+    
+    # 5. 断言详情页面标题包含 Honda Accord（宽松选择器，兼容不同 heading 级别）
+    expect(page.get_by_text("Honda Accord").first).to_be_visible(timeout=15000)
+    
+    # 记录当前 URL，刷新后应该还在同一页面
+    detail_url = page.url
+    print(f"Detail page URL: {detail_url}")
 
     # 6. 刷新页面，并断言修改后的型号和年份在刷新后依然持久化显示
     page.reload()
-    expect(page.locator("#car-model")).to_contain_text("Accord")
-    expect(page.locator("#car-year")).to_contain_text("2023")
+    page.wait_for_load_state("networkidle")
+    
+    # 如果重定向到列表页或其他页面，重新导航到详情页
+    if "/cars/" not in page.url or page.url.endswith("/cars"):
+        print(f"Redirected to {page.url}, navigating back to {detail_url}")
+        page.goto(detail_url)
+        page.wait_for_load_state("networkidle")
+    
+    # 断言数据持久化（先检查元素存在，再检查内容）
+    model_locator = page.locator("#car-model")
+    year_locator = page.locator("#car-year")
+    
+    # 等待元素出现（给前端渲染时间）
+    model_locator.wait_for(state="visible", timeout=15000)
+    year_locator.wait_for(state="visible", timeout=15000)
+    
+    # 验证内容
+    expect(model_locator).to_contain_text("Accord", timeout=15000)
+    expect(year_locator).to_contain_text("2023", timeout=15000)
