@@ -29,6 +29,12 @@ def test_user_edits_car_and_change_survives_reload(page, live_server):
     # 4. 点击保存修改
     page.get_by_role("button", name="Save changes").click()
 
+    # ===== 加这里：看点击后跳转到哪了 =====
+    page.wait_for_load_state("networkidle")
+    print(f"Current URL: {page.url}")  # 是 /cars/xxx 还是还在 /cars/xxx/edit？
+    print(f"Page title: {page.title()}")
+    # =====================================
+
     # 5. 断言详情页面标题包含 Honda Accord
     expect(page.get_by_text("Honda Accord", exact=False)).to_be_visible(timeout=15000)
 
